@@ -15,6 +15,10 @@ const messageSchema = new mongoose.Schema(
     text: {
       type: String,
     },
+      isSeen: {
+    type: Boolean,
+    default: false,
+  },
     image: {
       type: String,
     },
