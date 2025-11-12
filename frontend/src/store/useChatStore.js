@@ -6,6 +6,7 @@ import { useAuthStore } from "./useAuthStore";
 export const useChatStore = create((set, get) => ({
   messages: [],
   users: [],
+  isTyping: false,
   selectedUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
@@ -67,7 +68,7 @@ export const useChatStore = create((set, get) => ({
 
       set({ messages: [...messages, newMessage] });
 
-       //  If I'm currently chatting with this sender, mark their message as seen instantly
+    //  If I'm chatting with this sender, mark their message as seen instantly
     if (newMessage.senderId === selectedUser?._id) {
       socket.emit("markMessagesSeen", {
         senderId: selectedUser._id,
@@ -82,10 +83,6 @@ export const useChatStore = create((set, get) => ({
     socket.on("messagesSeen", ({ receiverId }) => {
       const { messages } = get();
 
-      // const updatedMessages = messages.map((msg) =>
-      //   msg.receiverId === receiverId ? { ...msg, isSeen: true } : msg
-      // );
-
        // Only mark messages sent by me to that receiver as seen
     const updated = messages.map((msg) =>
       msg.senderId === authUser._id && msg.receiverId === receiverId
@@ -95,6 +92,23 @@ export const useChatStore = create((set, get) => ({
 
       set({ messages: updated });
     });
+
+    // handle typing events
+    socket.on("userTyping", ({ senderId }) => {
+      const { selectedUser } = get();
+      if(selectedUser?._id === senderId) {
+        set({ isTyping : true });
+      }
+    });
+    
+
+    socket.on("userStoppedTyping", ({ senderId }) => {
+      const {selectedUser} = get();
+      if(selectedUser?._id === senderId) {
+        set({ isTyping: false});
+      }
+    })
+   
   },
 
   // 🔹 Unsubscribe when switching chats

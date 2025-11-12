@@ -1,29 +1,30 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
-import { Image, Send, X, Smile } from "lucide-react"; // Added Smile icon for Emoji picker
+import { Image, Send, X, Smile } from "lucide-react";
 import toast from "react-hot-toast";
-import EmojiPicker from 'emoji-picker-react';
-
+import EmojiPicker from "emoji-picker-react";
+import { useAuthStore } from "../store/useAuthStore"; // ✅ to access socket & user
 
 const MessageInput = () => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
-  const { sendMessage } = useChatStore();
- 
+  const typingTimeoutRef = useRef(null); // ✅ track typing timeout
 
+  const { sendMessage, selectedUser } = useChatStore();
+  const { authUser, socket } = useAuthStore(); // ✅ get socket instance
+
+  // ✅ Handle image upload
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
+    if (!file || !file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file");
       return;
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-    };
+    reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
   };
 
@@ -32,6 +33,28 @@ const MessageInput = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // ✅ Handle typing events
+  const handleTyping = (e) => {
+    const value = e.target.value;
+    setText(value);
+
+    // Emit "typing" when user starts typing
+    socket.emit("typing", {
+      senderId: authUser._id,
+      receiverId: selectedUser._id,
+    });
+
+    // Reset old timer & emit "stopTyping" after 1 second of inactivity
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("stopTyping", {
+        senderId: authUser._id,
+        receiverId: selectedUser._id,
+      });
+    }, 1000);
+  };
+
+  // ✅ Handle message send
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
@@ -42,7 +65,13 @@ const MessageInput = () => {
         image: imagePreview,
       });
 
-      // Clear form
+      // Stop typing indicator when message sent
+      socket.emit("stopTyping", {
+        senderId: authUser._id,
+        receiverId: selectedUser._id,
+      });
+
+      // Clear input and preview
       setText("");
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -56,8 +85,15 @@ const MessageInput = () => {
     setShowEmojiPicker(false);
   };
 
+  // ✅ Cleanup timeout when unmounting
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
+
   return (
-    <div className="p-4 w-full" >
+    <div className="p-4 w-full relative">
       {imagePreview && (
         <div className="mb-3 flex items-center gap-2">
           <div className="relative">
@@ -77,8 +113,6 @@ const MessageInput = () => {
         </div>
       )}
 
-
-
       {showEmojiPicker && (
         <div className="absolute bottom-16 left-4 z-10">
           <EmojiPicker onEmojiClick={handleEmojiClick} theme="auto" />
@@ -92,8 +126,9 @@ const MessageInput = () => {
             className="w-full input input-bordered rounded-lg input-sm sm:input-md"
             placeholder="Type a message..."
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={handleTyping} // ✅ real-time typing handler
           />
+
           <input
             type="file"
             accept="image/*"
@@ -114,7 +149,9 @@ const MessageInput = () => {
           {/* Image Upload Button */}
           <button
             type="button"
-            className={`btn btn-circle ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
+            className={`btn btn-circle ${
+              imagePreview ? "text-emerald-500" : "text-zinc-400"
+            }`}
             onClick={() => fileInputRef.current?.click()}
           >
             <Image size={20} />

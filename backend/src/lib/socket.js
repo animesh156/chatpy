@@ -26,7 +26,7 @@ io.on("connection", (socket) => {
   if (userId) userSocketMap[userId] = socket.id;
 
   // Broadcast all online users
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));  
+  io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   // 🔹 MARK MESSAGES AS SEEN EVENT
   socket.on("markMessagesSeen", async ({ senderId, receiverId }) => {
@@ -45,9 +45,25 @@ io.on("connection", (socket) => {
         io.to(senderSocketId).emit("messagesSeen", { receiverId });
       }
 
-      console.log(`✅ Messages from ${senderId} seen by ${receiverId}`);
+      // console.log(`✅ Messages from ${senderId} seen by ${receiverId}`);
     } catch (err) {
       console.error("Error in markMessagesSeen:", err.message);
+    }
+  });
+
+  // When user is typing
+  socket.on("typing", ({ senderId, receiverId }) => {
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("userTyping", { senderId });
+    }
+  });
+
+  // When user stops typing
+  socket.on("stopTyping", ({ senderId, receiverId }) => {
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("userStoppedTyping", { senderId });
     }
   });
 
@@ -55,7 +71,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
-    console.log("🔴 A user disconnected:", socket.id);
+    // console.log("🔴 A user disconnected:", socket.id);
   });
 });
 
