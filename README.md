@@ -119,7 +119,7 @@ NODE_ENV=development
 
 | Chat Interface | Seen + Typing Features |
 |----------------|------------------------|
-| ![Chat UI](https://res.cloudinary.com/dmdlgpurh/image/upload/v1741028959/yqopk4eqff7w6w8vb12a.png) | ![Typing Blue Tick](https://res.cloudinary.com/demo/image/upload/sample.jpg) |
+| ![Chat UI](https://res.cloudinary.com/dmdlgpurh/image/upload/v1741028959/yqopk4eqff7w6w8vb12a.png) |
 
 ---
 
