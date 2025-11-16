@@ -28,8 +28,8 @@ const ChatContainer = () => {
     // Fetch chat messages
     getMessages(selectedUser._id);
 
-    // Subscribe to socket events (newMessage, messagesSeen)
-    subscribeToMessages();
+    // // Subscribe to socket events (newMessage, messagesSeen)
+    // subscribeToMessages();
 
     // ✅ Emit event to backend → mark unseen messages as seen
     socket.emit("markMessagesSeen", {
@@ -37,7 +37,7 @@ const ChatContainer = () => {
       receiverId: authUser._id,   // you
     });
 
-    return () => unsubscribeFromMessages();
+    // return () => unsubscribeFromMessages();
   }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages, socket, authUser._id]);
 
   // 🔹 Auto-scroll to bottom whenever messages update

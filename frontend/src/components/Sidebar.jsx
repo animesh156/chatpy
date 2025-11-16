@@ -6,7 +6,12 @@ import { Users } from "lucide-react";
 import { useThemeStore } from "../store/useThemeStore";
 
 const Sidebar = () => {
-  const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
+  const users = useChatStore((state) => state.users);
+const getUsers = useChatStore((state) => state.getUsers);
+const selectedUser = useChatStore((state) => state.selectedUser);
+const setSelectedUser = useChatStore((state) => state.setSelectedUser);
+const isUsersLoading = useChatStore((state) => state.isUsersLoading);
+
   const { onlineUsers } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   const { theme } = useThemeStore();

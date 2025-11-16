@@ -8,6 +8,7 @@ import ProfilePage from "./pages/ProfilePage";
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
+import { useChatStore } from "./store/useChatStore";
 
 import { useEffect } from "react";
 
@@ -16,15 +17,26 @@ import { Toaster } from "react-hot-toast";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
-  
 
-  
+  const subscribeToMessages = useChatStore(
+    (state) => state.subscribeToMessages
+  );
+  const unsubscribeFromMessages = useChatStore(
+    (state) => state.unsubscribeFromMessages
+  );
 
+  // Check login status
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
-  console.log({ authUser });
+  // 🚀 Always enable real-time messaging once user is authenticated
+  useEffect(() => {
+    if (authUser) {
+      subscribeToMessages();
+      return () => unsubscribeFromMessages();
+    }
+  }, [authUser]);
 
   if (isCheckingAuth && !authUser)
     return (
@@ -38,15 +50,28 @@ const App = () => {
       <Navbar />
 
       <Routes>
-        <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
-        <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
-        <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
+        <Route
+          path="/"
+          element={authUser ? <HomePage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/signup"
+          element={!authUser ? <SignUpPage /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/login"
+          element={!authUser ? <LoginPage /> : <Navigate to="/" />}
+        />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
+        <Route
+          path="/profile"
+          element={authUser ? <ProfilePage /> : <Navigate to="/login" />}
+        />
       </Routes>
 
       <Toaster />
     </>
   );
 };
+
 export default App;
