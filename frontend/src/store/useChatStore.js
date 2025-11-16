@@ -79,40 +79,46 @@ export const useChatStore = create((set, get) => ({
     // });
 
     socket.on("newMessage", (newMessage) => {
-      const { selectedUser, messages, users } = get();
-      const authUser = useAuthStore.getState().authUser;
+  const { selectedUser, messages, users } = get();
+  const authUser = useAuthStore.getState().authUser;
 
-      // 1️⃣ If the chat is open, show the incoming message
-      const isRelevant =
-        newMessage.senderId === selectedUser?._id ||
-        newMessage.receiverId === selectedUser?._id;
+  // --- If chat is open, update messages ---
+  const isRelevant =
+    newMessage.senderId === selectedUser?._id ||
+    newMessage.receiverId === selectedUser?._id;
 
-      if (isRelevant) {
-        set({ messages: [...messages, newMessage] });
+  if (isRelevant) {
+    set({ messages: [...messages, newMessage] });
 
-        // auto mark as seen
-        if (newMessage.senderId === selectedUser?._id) {
-          socket.emit("markMessagesSeen", {
-            senderId: selectedUser._id,
-            receiverId: authUser._id,
-          });
+    if (newMessage.senderId === selectedUser?._id) {
+      socket.emit("markMessagesSeen", {
+        senderId: selectedUser._id,
+        receiverId: authUser._id,
+      });
+    }
+  }
+
+  // --- ALWAYS update preview (WhatsApp style) ---
+  const updatedUsers = users.map((u) =>
+    u._id === newMessage.senderId || u._id === newMessage.receiverId
+      ? {
+          ...u,
+          lastMessageAt: newMessage.createdAt,
+          lastMessageText: newMessage.text || "",
+          lastMessageImage: newMessage.image || null,
         }
-      }
+      : u
+  );
 
-      // 2️⃣ ALWAYS update lastMessageAt for BOTH users — even when no chat is open
-      const updatedUsers = users.map((u) =>
-        u._id === newMessage.senderId || u._id === newMessage.receiverId
-          ? { ...u, lastMessageAt: newMessage.createdAt }
-          : u
-      );
+  // --- Sort by most recent ---
+  updatedUsers.sort(
+    (a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
+  );
 
-      // 3️⃣ ALWAYS reorder the list (WhatsApp-style)
-      updatedUsers.sort(
-        (a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
-      );
+  // --- Force rerender ---
+  set({ users: [...updatedUsers] });
+});
 
-      set({ users: [...updatedUsers] });
-    });
 
     // ✅ Seen event — turns gray ticks → blue in real-time
     socket.on("messagesSeen", ({ receiverId }) => {

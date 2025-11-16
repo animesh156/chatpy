@@ -7,10 +7,10 @@ import { useThemeStore } from "../store/useThemeStore";
 
 const Sidebar = () => {
   const users = useChatStore((state) => state.users);
-const getUsers = useChatStore((state) => state.getUsers);
-const selectedUser = useChatStore((state) => state.selectedUser);
-const setSelectedUser = useChatStore((state) => state.setSelectedUser);
-const isUsersLoading = useChatStore((state) => state.isUsersLoading);
+  const getUsers = useChatStore((state) => state.getUsers);
+  const selectedUser = useChatStore((state) => state.selectedUser);
+  const setSelectedUser = useChatStore((state) => state.setSelectedUser);
+  const isUsersLoading = useChatStore((state) => state.isUsersLoading);
 
   const { onlineUsers } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
@@ -89,6 +89,17 @@ const isUsersLoading = useChatStore((state) => state.isUsersLoading);
               <span className="font-medium text-base truncate">
                 {user.fullName}
               </span>
+
+              {/* MESSAGE PREVIEW */}
+              <span className="text-sm text-gray-400 truncate">
+                {user.lastMessageImage
+                  ? "📷 Photo"
+                  : user.lastMessageText
+                  ? user.lastMessageText
+                  : ""}
+              </span>
+
+              {/* Online status */}
               <span
                 className={`text-sm ${
                   onlineUsers.includes(user._id)
@@ -96,16 +107,14 @@ const isUsersLoading = useChatStore((state) => state.isUsersLoading);
                     : "text-gray-500"
                 }`}
               >
-                {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+                {/* {onlineUsers.includes(user._id) ? "Online" : "Offline"} */}
               </span>
             </div>
           </button>
         ))}
 
         {filteredUsers.length === 0 && (
-          <div className="text-center text-zinc-500 py-4">
-            No online users
-          </div>
+          <div className="text-center text-zinc-500 py-4">No online users</div>
         )}
       </div>
     </aside>
