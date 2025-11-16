@@ -54,41 +54,82 @@ export const useChatStore = create((set, get) => ({
   // 🔹 Subscribe to real-time updates via Socket.IO
   subscribeToMessages: () => {
     const socket = useAuthStore.getState().socket;
-      const authUser = useAuthStore.getState().authUser;
+    const authUser = useAuthStore.getState().authUser;
 
     // ✅ New message event
+    // socket.on("newMessage", (newMessage) => {
+    //   const { selectedUser, messages } = get();
+
+    //   const isRelevant =
+    //     newMessage.senderId === selectedUser?._id ||
+    //     newMessage.receiverId === selectedUser?._id;
+
+    //   if (!isRelevant) return;
+
+    //   set({ messages: [...messages, newMessage] });
+
+    // //  If I'm chatting with this sender, mark their message as seen instantly
+    // if (newMessage.senderId === selectedUser?._id) {
+    //   socket.emit("markMessagesSeen", {
+    //     senderId: selectedUser._id,
+    //     receiverId: authUser._id,
+    //   });
+    // }
+
+    // });
+
     socket.on("newMessage", (newMessage) => {
-      const { selectedUser, messages } = get();
+  const { selectedUser, messages, users } = get();
+  const authUser = useAuthStore.getState().authUser;
 
-      const isRelevant =
-        newMessage.senderId === selectedUser?._id ||
-        newMessage.receiverId === selectedUser?._id;
+  // --- If chat is open, update messages ---
+  const isRelevant =
+    newMessage.senderId === selectedUser?._id ||
+    newMessage.receiverId === selectedUser?._id;
 
-      if (!isRelevant) return;
+  if (isRelevant) {
+    set({ messages: [...messages, newMessage] });
 
-      set({ messages: [...messages, newMessage] });
-
-    //  If I'm chatting with this sender, mark their message as seen instantly
     if (newMessage.senderId === selectedUser?._id) {
       socket.emit("markMessagesSeen", {
         senderId: selectedUser._id,
         receiverId: authUser._id,
       });
     }
+  }
 
+  // --- ALWAYS update preview (WhatsApp style) ---
+  const updatedUsers = users.map((u) =>
+    u._id === newMessage.senderId || u._id === newMessage.receiverId
+      ? {
+          ...u,
+          lastMessageAt: newMessage.createdAt,
+          lastMessageText: newMessage.text || "",
+          lastMessageImage: newMessage.image || null,
+        }
+      : u
+  );
 
-    });
+  // --- Sort by most recent ---
+  updatedUsers.sort(
+    (a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
+  );
+
+  // --- Force rerender ---
+  set({ users: [...updatedUsers] });
+});
+
 
     // ✅ Seen event — turns gray ticks → blue in real-time
     socket.on("messagesSeen", ({ receiverId }) => {
       const { messages } = get();
 
-       // Only mark messages sent by me to that receiver as seen
-    const updated = messages.map((msg) =>
-      msg.senderId === authUser._id && msg.receiverId === receiverId
-        ? { ...msg, isSeen: true }
-        : msg
-    );
+      // Only mark messages sent by me to that receiver as seen
+      const updated = messages.map((msg) =>
+        msg.senderId === authUser._id && msg.receiverId === receiverId
+          ? { ...msg, isSeen: true }
+          : msg
+      );
 
       set({ messages: updated });
     });
@@ -96,19 +137,17 @@ export const useChatStore = create((set, get) => ({
     // handle typing events
     socket.on("userTyping", ({ senderId }) => {
       const { selectedUser } = get();
-      if(selectedUser?._id === senderId) {
-        set({ isTyping : true });
+      if (selectedUser?._id === senderId) {
+        set({ isTyping: true });
       }
     });
-    
 
     socket.on("userStoppedTyping", ({ senderId }) => {
-      const {selectedUser} = get();
-      if(selectedUser?._id === senderId) {
-        set({ isTyping: false});
+      const { selectedUser } = get();
+      if (selectedUser?._id === senderId) {
+        set({ isTyping: false });
       }
-    })
-   
+    });
   },
 
   // 🔹 Unsubscribe when switching chats
