@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config(); // must be before any other env usage
 import express from "express";
+import mongoose from "mongoose"; 
 
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -25,8 +26,42 @@ app.use(
   })
 );
 
+function formatUptime(seconds) {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  return `${hrs}h ${mins}m ${secs}s`;
+}
+
+function getISTTimestamp() {
+  return new Date().toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+  });
+}
+
+
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const status = dbState === 1 ? "healthy" : "unhealthy";
+
+  const uptimeInSeconds = process.uptime();
+
+  res.status(status === "healthy" ? 200 : 500).json({
+    status,
+    timestampIST: getISTTimestamp(),
+    uptime: formatUptime(uptimeInSeconds),
+    database: {
+      state: dbState,
+      description: dbState === 1 ? "Connected" : "Not Connected ❌",
+    },
+  });
+});
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
